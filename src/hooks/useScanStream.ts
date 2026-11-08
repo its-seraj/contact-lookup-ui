@@ -131,8 +131,13 @@ export function useScanStream() {
       abortControllerRef.current = controller;
 
       // Determine endpoint
-      const baseUrl = customBaseUrl?.trim() ? customBaseUrl.trim().replace(/\/$/, '') : '';
-      const endpoint = baseUrl ? `${baseUrl}/api/scan` : '/api/scan';
+      const rawBase = customBaseUrl?.trim() ? customBaseUrl.trim().replace(/\/$/, '') : '';
+      let endpoint = '/api/scan';
+      if (rawBase) {
+        // Replace 0.0.0.0 with 127.0.0.1 because browsers cannot route to 0.0.0.0 on Windows
+        const normalized = rawBase.replace(/:\/\/0\.0\.0\.0/, '://127.0.0.1');
+        endpoint = normalized.endsWith('/api/scan') ? normalized : `${normalized}/api/scan`;
+      }
 
       try {
         appendLog(request.domains[0], `  [*] Connecting to ${endpoint}...`);

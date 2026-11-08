@@ -76,11 +76,11 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={() => setShowSettings(!showSettings)}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition"
-            title="Configure Backend API URL"
+            title="Backend Endpoint (Proxy to http://127.0.0.1:8000)"
           >
             <Settings className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden sm:inline font-mono text-[11px] text-slate-400">
-              {backendUrl ? backendUrl.replace(/^https?:\/\//, '') : 'Vite Proxy'}
+            <span className="hidden sm:inline font-mono text-[11px] text-sky-400">
+              {backendUrl ? backendUrl.replace(/^https?:\/\//, '') : 'http://127.0.0.1:8000'}
             </span>
           </button>
         </div>
