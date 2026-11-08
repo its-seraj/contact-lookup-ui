@@ -6,7 +6,6 @@ import {
   Mail,
   ChevronRight,
   ArrowUpDown,
-  Sparkles,
   Copy,
   Check,
 } from 'lucide-react';
@@ -14,6 +13,7 @@ import { LinkedinIcon, GithubIcon } from './Icons';
 import type { ContactRow } from '../types/enrichment';
 import { exportToCSV, exportToJSON } from '../utils/exportUtils';
 import { ContactDetailsModal } from './ContactDetailsModal';
+import { getEmailStatusBadge, isEmailStatusValid } from '../utils/statusBadge';
 
 interface ContactsGridProps {
   contacts: ContactRow[];
@@ -21,8 +21,8 @@ interface ContactsGridProps {
   domainName?: string;
 }
 
-type FilterTab = 'all' | 'with_email' | 'with_linkedin' | 'high_confidence';
-type SortField = 'confidence' | 'full_name' | 'title';
+type FilterTab = 'all' | 'with_email' | 'with_linkedin';
+type SortField = 'full_name' | 'title';
 type SortOrder = 'asc' | 'desc';
 
 export const ContactsGrid: React.FC<ContactsGridProps> = ({
@@ -31,8 +31,8 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
-  const [sortField, setSortField] = useState<SortField>('confidence');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [sortField, setSortField] = useState<SortField>('full_name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [selectedContact, setSelectedContact] = useState<ContactRow | null>(null);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
   const [pageSize, setPageSize] = useState<number>(25);
@@ -59,7 +59,9 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
           c.title?.toLowerCase().includes(q) ||
           c.email?.toLowerCase().includes(q) ||
           c.github?.toLowerCase().includes(q) ||
-          c.domain?.toLowerCase().includes(q)
+          c.domain?.toLowerCase().includes(q) ||
+          c.email_status?.toLowerCase().includes(q) ||
+          (q === 'valid' && isEmailStatusValid(c.email_status))
       );
     }
 
@@ -68,8 +70,6 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
       result = result.filter((c) => Boolean(c.email && c.email.trim()));
     } else if (activeTab === 'with_linkedin') {
       result = result.filter((c) => Boolean(c.linkedin && c.linkedin.trim()));
-    } else if (activeTab === 'high_confidence') {
-      result = result.filter((c) => c.confidence >= 60);
     }
 
     // Sort
@@ -103,50 +103,6 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
       setSortField(field);
       setSortOrder('desc');
     }
-  };
-
-  const getConfidenceBadge = (confidence: number) => {
-    if (confidence >= 60) {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold font-mono bg-emerald-950/80 text-emerald-400 border border-emerald-800">
-          {confidence}%
-        </span>
-      );
-    }
-    if (confidence >= 45) {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold font-mono bg-amber-950/80 text-amber-400 border border-amber-800">
-          {confidence}%
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold font-mono bg-slate-900 text-slate-400 border border-slate-800">
-        {confidence}%
-      </span>
-    );
-  };
-
-  const getEmailStatusBadge = (status: string, email: string) => {
-    if (status === 'verified') {
-      return (
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-950 text-emerald-400 border border-emerald-800">
-          verified
-        </span>
-      );
-    }
-    if (email) {
-      return (
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-950 text-amber-400 border border-amber-800">
-          unverified
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-900 text-slate-500 border border-slate-800">
-        name only
-      </span>
-    );
   };
 
   return (
@@ -214,21 +170,6 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
             <LinkedinIcon className="w-3 h-3" />
             <span>With LinkedIn ({contacts.filter((c) => Boolean(c.linkedin)).length})</span>
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('high_confidence');
-              setCurrentPage(1);
-            }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap flex items-center gap-1.5 ${
-              activeTab === 'high_confidence'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-            }`}
-          >
-            <Sparkles className="w-3 h-3" />
-            <span>Confidence ≥ 60%</span>
-          </button>
         </div>
 
         {/* Export Buttons */}
@@ -282,16 +223,6 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
                 </button>
               </th>
               <th className="py-3 px-4">Email Address</th>
-              <th className="py-3 px-4">
-                <button
-                  type="button"
-                  onClick={() => toggleSort('confidence')}
-                  className="flex items-center gap-1 hover:text-slate-200"
-                >
-                  <span>Confidence</span>
-                  <ArrowUpDown className="w-3 h-3" />
-                </button>
-              </th>
               <th className="py-3 px-4">Profiles</th>
               <th className="py-3 px-4">Sources</th>
               <th className="py-3 px-4 text-right">Details</th>
@@ -300,7 +231,7 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
           <tbody className="divide-y divide-slate-800/60 text-xs">
             {paginatedContacts.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-slate-500">
+                <td colSpan={6} className="py-12 text-center text-slate-500">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <Filter className="w-6 h-6 text-slate-600" />
                     <p className="text-sm font-medium text-slate-400">No matching contacts found</p>
@@ -376,8 +307,6 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
                       )}
                     </td>
 
-                    {/* Confidence */}
-                    <td className="py-3 px-4">{getConfidenceBadge(contact.confidence)}</td>
 
                     {/* Profiles (LinkedIn & GitHub) */}
                     <td className="py-3 px-4">

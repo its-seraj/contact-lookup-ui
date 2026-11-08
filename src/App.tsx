@@ -6,40 +6,36 @@ import { LiveLogFeed } from './components/LiveLogFeed';
 import { MetricsSummary } from './components/MetricsSummary';
 import { ContactsGrid } from './components/ContactsGrid';
 import { useScanStream } from './hooks/useScanStream';
-import { AlertCircle, Sparkles, Database, ArrowRight } from 'lucide-react';
+import { AlertCircle, Sparkles, Database, ArrowRight, Loader2 } from 'lucide-react';
 
 export function App() {
-  const [domains, setDomains] = useState<string[]>(['bamboobox.ai']);
+  const [domains, setDomains] = useState<string[]>([]);
   const [isVerify, setIsVerify] = useState<boolean>(true);
   const [isLinkedin, setIsLinkedin] = useState<boolean>(true);
-  const [backendUrl, setBackendUrl] = useState<string>('');
 
   const {
     status,
     isScanning,
     activeDomain,
+    stage,
     logs,
     results,
     counts,
     meta,
+    domainMetas,
     elapsedMs,
     error,
     startScan,
     stopScan,
     reset,
-    loadSampleData,
-    simulateStreamDemo,
   } = useScanStream();
 
   const handleStartScan = () => {
-    startScan(
-      {
-        domains,
-        isVerify,
-        isLinkedin,
-      },
-      backendUrl
-    );
+    startScan({
+      domains,
+      isVerify,
+      isLinkedin,
+    });
   };
 
   const hasResults = results.length > 0;
@@ -47,13 +43,7 @@ export function App() {
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col font-sans">
       {/* Top Navigation */}
-      <Header
-        backendUrl={backendUrl}
-        onUpdateBackendUrl={setBackendUrl}
-        onLoadSample={loadSampleData}
-        onSimulateDemo={simulateStreamDemo}
-        isScanning={isScanning}
-      />
+      <Header />
 
       {/* Main Body */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -91,7 +81,7 @@ export function App() {
               <p className="font-semibold text-rose-200">Encountered an issue</p>
               <p className="mt-0.5 text-rose-300/90">{error}</p>
               <p className="mt-1 text-[11px] text-rose-400/80">
-                Tip: If your backend is running on http://0.0.0.0:8000 or http://localhost:8000, ensure CORS is enabled or use the settings cog above to customize the target URL. You can also click &ldquo;Load Sample&rdquo; or &ldquo;Simulate Stream&rdquo; to test the UI instantly.
+                Tip: Ensure your backend enrichment service is running and accessible at /api/scan.
               </p>
             </div>
           </div>
@@ -114,6 +104,8 @@ export function App() {
               counts={counts}
               meta={meta}
               totalRows={results.length}
+              contacts={results}
+              domainMetas={domainMetas}
             />
           </section>
         )}
@@ -130,6 +122,12 @@ export function App() {
                 <span className="text-xs font-mono text-slate-400">
                   ({results.length} records)
                 </span>
+                {(isScanning || stage?.toLowerCase().includes('permut')) && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-950/70 text-emerald-300 border border-emerald-800/60">
+                    <Loader2 className="w-3 h-3 animate-spin text-emerald-400 shrink-0" />
+                    <span>{stage || 'starting'}</span>
+                  </span>
+                )}
               </div>
             </div>
 
@@ -161,13 +159,6 @@ export function App() {
               >
                 <span>Run Scan for {domains[0] || 'domain'}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={loadSampleData}
-                className="px-3 py-2 text-xs font-medium rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition"
-              >
-                Load Sample Data
               </button>
             </div>
           </div>

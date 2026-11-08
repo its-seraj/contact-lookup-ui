@@ -326,7 +326,23 @@ const server = http.createServer(async (req, res) => {
         res.write(JSON.stringify({ type: 'log', domain: targetDomain, message: log }) + '\n');
       }
 
-      // 3. Send result event
+      // 3. Stream partial rows, the way the real backend does per stage
+      const chunkSize = Math.max(1, Math.ceil(SAMPLE_ROWS.length / 4));
+      for (let i = 0; i < SAMPLE_ROWS.length; i += chunkSize) {
+        await new Promise(r => setTimeout(r, 250));
+        const chunk = SAMPLE_ROWS.slice(i, i + chunkSize);
+        res.write(JSON.stringify({
+          type: 'partial',
+          domain: targetDomain,
+          stage: i === 0 ? 'discovered' : `permuting:${i / chunkSize}`,
+          rows: chunk,
+          removed: [],
+          total: i + chunk.length,
+          rows_total: i + chunk.length,
+        }) + '\n');
+      }
+
+      // 4. Send result event (authoritative for this domain)
       await new Promise(r => setTimeout(r, 100));
       const resultEvent = {
         type: 'result',
@@ -340,6 +356,13 @@ const server = http.createServer(async (req, res) => {
           with_email: 1,
           with_name: SAMPLE_ROWS.length,
           verified: 0,
+          timings: {
+            discovery: 21.2,
+            linkedin_profiles: 29.3,
+            linkedin_lookups: 5.5,
+            verify: 12.3,
+            permute: 652.7
+          },
           pattern: "{first}{last}",
           mail: {
             mx: ["aspmx.l.google.com"],
@@ -358,7 +381,7 @@ const server = http.createServer(async (req, res) => {
       };
       res.write(JSON.stringify(resultEvent) + '\n');
 
-      // 4. Send done event
+      // 5. Send done event
       await new Promise(r => setTimeout(r, 80));
       res.write(JSON.stringify({ type: 'done', domains: requestData.domains?.length || 1, elapsed_ms: 3500 }) + '\n');
       res.end();

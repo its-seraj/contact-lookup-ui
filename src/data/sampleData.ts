@@ -1483,6 +1483,13 @@ export const SAMPLE_META: ScanMeta = {
   with_email: 1,
   with_name: 72,
   verified: 0,
+  timings: {
+    discovery: 21.2,
+    linkedin_profiles: 29.3,
+    linkedin_lookups: 5.5,
+    verify: 12.3,
+    permute: 652.7
+  },
   pattern: "{first}{last}",
   patterns_considered: ["{first}{last}"],
   mail: {

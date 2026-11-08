@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { X, ExternalLink, Mail, Check, Copy } from 'lucide-react';
 import { LinkedinIcon, GithubIcon } from './Icons';
 import type { ContactRow } from '../types/enrichment';
+import { getEmailStatusBadge } from '../utils/statusBadge';
 
 interface ContactDetailsModalProps {
   contact: ContactRow | null;
@@ -69,9 +70,12 @@ export const ContactDetailsModal: React.FC<ContactDetailsModalProps> = ({ contac
               <Mail className="w-4 h-4 text-sky-400" />
               <div>
                 <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Email Address</p>
-                <p className="text-sm font-mono text-slate-200 mt-0.5">
-                  {contact.email || <span className="text-slate-500 italic">No address resolved ({contact.email_status})</span>}
-                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-sm font-mono text-slate-200">
+                    {contact.email || <span className="text-slate-500 italic">No address resolved ({contact.email_status})</span>}
+                  </p>
+                  {contact.email && getEmailStatusBadge(contact.email_status, contact.email)}
+                </div>
               </div>
             </div>
             {contact.email && (

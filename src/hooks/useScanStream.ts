@@ -9,6 +9,7 @@ import type {
   ScanStatus,
 } from '../types/enrichment';
 import { SAMPLE_COUNTS, SAMPLE_LOGS, SAMPLE_META, SAMPLE_ROWS } from '../data/sampleData';
+import { mergeRows, replaceDomain } from '../utils/rowKey';
 
 function parseLogType(message: string): LogMessage['type'] {
   const trimmed = message.trim();
@@ -20,6 +21,8 @@ function parseLogType(message: string): LogMessage['type'] {
   return 'detail';
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export function useScanStream() {
   const [status, setStatus] = useState<ScanStatus>('idle');
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
@@ -27,10 +30,14 @@ export function useScanStream() {
   const [results, setResults] = useState<ContactRow[]>([]);
   const [counts, setCounts] = useState<ScanCounts | null>(null);
   const [meta, setMeta] = useState<ScanMeta | null>(null);
+  const [domainMetas, setDomainMetas] = useState<Record<string, ScanMeta>>({});
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Latest pipeline stage reported by a `partial` event. */
+  const [stage, setStage] = useState<string | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
+  const cancelledRef = useRef(false);
   const logIdCounter = useRef(0);
 
   const appendLog = useCallback((domain: string, message: string) => {
@@ -46,6 +53,7 @@ export function useScanStream() {
   }, []);
 
   const reset = useCallback(() => {
+    cancelledRef.current = true;
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
@@ -56,11 +64,67 @@ export function useScanStream() {
     setResults([]);
     setCounts(null);
     setMeta(null);
+    setDomainMetas({});
     setElapsedMs(null);
     setError(null);
+    setStage(null);
   }, []);
 
+  const loadSampleData = useCallback(() => {
+    reset();
+    setStatus('completed');
+    setActiveDomain(SAMPLE_META.domain || 'sample.com');
+    setLogs(
+      SAMPLE_LOGS.map((message, index) => ({
+        id: `sample-${index}`,
+        domain: SAMPLE_META.domain || 'sample.com',
+        message,
+        timestamp: new Date().toLocaleTimeString(),
+        type: parseLogType(message),
+      }))
+    );
+    setResults(SAMPLE_ROWS);
+    setCounts(SAMPLE_COUNTS);
+    setMeta(SAMPLE_META);
+    setDomainMetas({ [SAMPLE_META.domain || 'bamboobox.ai']: SAMPLE_META });
+    setElapsedMs(3400);
+    setStage('completed');
+  }, [reset]);
+
+  const simulateStreamDemo = useCallback(async () => {
+    reset();
+    cancelledRef.current = false;
+    setStatus('scanning');
+    const demoDomain = SAMPLE_META.domain || 'sample.com';
+    setActiveDomain(demoDomain);
+
+    for (const message of SAMPLE_LOGS) {
+      if (cancelledRef.current) return;
+      appendLog(demoDomain, message);
+      await sleep(45);
+    }
+
+    // Rows arrive in chunks, the way the real backend emits partial stages.
+    const chunkSize = Math.max(1, Math.ceil(SAMPLE_ROWS.length / 4));
+    for (let index = 0; index < SAMPLE_ROWS.length; index += chunkSize) {
+      if (cancelledRef.current) return;
+      const chunk = SAMPLE_ROWS.slice(index, index + chunkSize);
+      setResults((prev) => mergeRows(prev, chunk, [], demoDomain));
+      setStage(index === 0 ? 'discovered' : `permuting:${index / chunkSize}`);
+      await sleep(450);
+    }
+
+    if (cancelledRef.current) return;
+    setCounts(SAMPLE_COUNTS);
+    setMeta(SAMPLE_META);
+    setDomainMetas({ [SAMPLE_META.domain || 'bamboobox.ai']: SAMPLE_META });
+    setElapsedMs(3400);
+    setStage('completed');
+    setStatus('completed');
+  }, [appendLog, reset]);
+
   const stopScan = useCallback(() => {
+    cancelledRef.current = true;
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
@@ -69,52 +133,77 @@ export function useScanStream() {
     appendLog(activeDomain || 'system', '  [!] Scan cancelled by user.');
   }, [activeDomain, appendLog]);
 
-  const loadSampleData = useCallback(() => {
-    reset();
-    setStatus('completed');
-    setActiveDomain('bamboobox.ai');
-    setElapsedMs(113532);
+  const handleEvent = useCallback(
+    (event: ScanEvent) => {
+      switch (event.type) {
+        case 'start':
+          setActiveDomain(event.domain);
+          appendLog(event.domain, `  [*] Scan started for domain: ${event.domain}`);
+          break;
 
-    const formattedLogs: LogMessage[] = SAMPLE_LOGS.map((msg, idx) => ({
-      id: `sample-log-${idx}`,
-      domain: 'bamboobox.ai',
-      message: msg,
-      timestamp: new Date().toLocaleTimeString(),
-      type: parseLogType(msg),
-    }));
+        case 'log':
+          appendLog(event.domain, event.message);
+          break;
 
-    setLogs(formattedLogs);
-    setResults(SAMPLE_ROWS);
-    setCounts(SAMPLE_COUNTS);
-    setMeta(SAMPLE_META);
-  }, [reset]);
+        case 'partial':
+          // Incremental rows: upsert by person, apply deletions.
+          setResults((prev) =>
+            mergeRows(prev, event.rows || [], event.removed || [], event.domain)
+          );
+          setStage(event.stage);
+          break;
 
-  const simulateStreamDemo = useCallback(async () => {
-    reset();
-    setStatus('scanning');
-    setActiveDomain('bamboobox.ai');
-    setError(null);
+        case 'cached':
+          setCounts(event.counts ?? null);
+          if (event.meta) {
+            setMeta(event.meta);
+            setDomainMetas((prev) => ({
+              ...prev,
+              [event.domain]: event.meta!,
+            }));
+          }
+          appendLog(
+            event.domain,
+            `  [i] Served from cache (scanned ${event.scanned_at || 'earlier'})`
+          );
+          break;
 
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
+        case 'result':
+          // Authoritative for this domain: replace, never append.
+          setResults((prev) => replaceDomain(prev, event.domain, event.rows || []));
+          if (event.meta) {
+            const timings = event.meta.timings || event.timings;
+            const updatedMeta: ScanMeta = {
+              ...event.meta,
+              ...(timings ? { timings } : {}),
+            };
+            setMeta(updatedMeta);
+            setDomainMetas((prev) => ({
+              ...prev,
+              [event.domain]: updatedMeta,
+            }));
+          }
+          if (event.counts) setCounts(event.counts);
+          setStage(event.cached ? 'cached' : 'result');
+          break;
 
-    appendLog('bamboobox.ai', '  [*] Initiating simulation scan...');
+        case 'done':
+          setElapsedMs(event.elapsed_ms);
+          setStatus('completed');
+          appendLog(
+            'system',
+            `  [+] Done! Processed ${event.domains} domain(s) in ${(event.elapsed_ms / 1000).toFixed(1)}s`
+          );
+          break;
 
-    for (let i = 0; i < SAMPLE_LOGS.length; i++) {
-      if (controller.signal.aborted) return;
-      await new Promise((resolve) => setTimeout(resolve, 80));
-      if (controller.signal.aborted) return;
-      appendLog('bamboobox.ai', SAMPLE_LOGS[i]);
-    }
-
-    if (controller.signal.aborted) return;
-    setResults(SAMPLE_ROWS);
-    setCounts(SAMPLE_COUNTS);
-    setMeta(SAMPLE_META);
-    setElapsedMs(113532);
-    setStatus('completed');
-    abortControllerRef.current = null;
-  }, [appendLog, reset]);
+        case 'error':
+          setError(event.message);
+          appendLog(event.domain || 'system', `  [!] Error: ${event.message}`);
+          break;
+      }
+    },
+    [appendLog]
+  );
 
   const startScan = useCallback(
     async (request: ScanRequest, customBaseUrl?: string) => {
@@ -124,17 +213,16 @@ export function useScanStream() {
       }
 
       reset();
+      cancelledRef.current = false;
       setStatus('scanning');
       setError(null);
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
-      // Determine endpoint
       const rawBase = customBaseUrl?.trim() ? customBaseUrl.trim().replace(/\/$/, '') : '';
       let endpoint = '/api/scan';
       if (rawBase) {
-        // Replace 0.0.0.0 with 127.0.0.1 because browsers cannot route to 0.0.0.0 on Windows
         const normalized = rawBase.replace(/:\/\/0\.0\.0\.0/, '://127.0.0.1');
         endpoint = normalized.endsWith('/api/scan') ? normalized : `${normalized}/api/scan`;
       }
@@ -144,9 +232,7 @@ export function useScanStream() {
 
         const response = await fetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(request),
           signal: controller.signal,
         });
@@ -154,7 +240,6 @@ export function useScanStream() {
         if (!response.ok) {
           throw new Error(`Server returned HTTP ${response.status}: ${response.statusText}`);
         }
-
         if (!response.body) {
           throw new Error('ReadableStream not supported or empty response body');
         }
@@ -174,55 +259,19 @@ export function useScanStream() {
           for (const line of lines) {
             const trimmed = line.trim();
             if (!trimmed) continue;
-
             try {
-              const event: ScanEvent = JSON.parse(trimmed);
-
-              switch (event.type) {
-                case 'start':
-                  setActiveDomain(event.domain);
-                  appendLog(event.domain, `  [*] Scan started for domain: ${event.domain}`);
-                  break;
-
-                case 'log':
-                  appendLog(event.domain, event.message);
-                  break;
-
-                case 'result':
-                  if (event.rows && Array.isArray(event.rows)) {
-                    setResults((prev) => [...prev, ...event.rows]);
-                  }
-                  if (event.meta) setMeta(event.meta);
-                  if (event.counts) setCounts(event.counts);
-                  break;
-
-                case 'done':
-                  setElapsedMs(event.elapsed_ms);
-                  setStatus('completed');
-                  appendLog('system', `  [+] Done! Processed ${event.domains} domain(s) in ${(event.elapsed_ms / 1000).toFixed(1)}s`);
-                  break;
-
-                case 'error':
-                  setError(event.message);
-                  appendLog(event.domain || 'system', `  [!] Error: ${event.message}`);
-                  break;
-              }
+              handleEvent(JSON.parse(trimmed) as ScanEvent);
             } catch {
-              // Non-JSON line or formatted log message
               appendLog(activeDomain || 'stream', trimmed);
             }
           }
         }
 
-        // Process leftover buffer
         if (buffer.trim()) {
           try {
-            const event: ScanEvent = JSON.parse(buffer.trim());
-            if (event.type === 'result' && event.rows) {
-              setResults((prev) => [...prev, ...event.rows]);
-            }
+            handleEvent(JSON.parse(buffer.trim()) as ScanEvent);
           } catch {
-            // Ignore
+            // ignore trailing partial JSON
           }
         }
 
@@ -232,8 +281,8 @@ export function useScanStream() {
           setStatus('aborted');
           return;
         }
-
-        const errMsg = err instanceof Error ? err.message : 'Failed to connect to backend scan API';
+        const errMsg =
+          err instanceof Error ? err.message : 'Failed to connect to backend scan API';
         setError(errMsg);
         setStatus('error');
         appendLog('system', `  [!] Error: ${errMsg}`);
@@ -241,17 +290,19 @@ export function useScanStream() {
         abortControllerRef.current = null;
       }
     },
-    [activeDomain, appendLog, reset]
+    [activeDomain, appendLog, handleEvent, reset]
   );
 
   return {
     status,
     isScanning: status === 'scanning',
     activeDomain,
+    stage,
     logs,
     results,
     counts,
     meta,
+    domainMetas,
     elapsedMs,
     error,
     startScan,
