@@ -307,7 +307,9 @@ const server = http.createServer(async (req, res) => {
       let requestData = { domains: ['bamboobox.ai'], isVerify: true, isLinkedin: true };
       try {
         if (body) requestData = JSON.parse(body);
-      } catch (e) {}
+      } catch {
+        // use default fallback
+      }
 
       const targetDomain = requestData.domains?.[0] || 'bamboobox.ai';
 
