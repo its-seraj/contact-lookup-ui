@@ -2,6 +2,16 @@ import React from 'react';
 import { Sparkles } from 'lucide-react';
 
 export const Header: React.FC = () => {
+  const apiBase = import.meta.env.VITE_API_BASE_URL as string | undefined;
+  let apiHost = 'Local Proxy (/api)';
+  if (apiBase) {
+    try {
+      apiHost = new URL(apiBase).host;
+    } catch {
+      apiHost = apiBase;
+    }
+  }
+
   return (
     <header className="border-b border-slate-800/80 bg-[#090d16]/90 backdrop-blur sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -21,6 +31,15 @@ export const Header: React.FC = () => {
               Multi-source intelligence & email verification engine
             </p>
           </div>
+        </div>
+
+        {/* Backend Connected Indicator */}
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-800 text-xs font-mono text-slate-300">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="text-slate-400">API:</span>
+          <span className="text-emerald-400 truncate max-w-[200px]" title={apiBase || '/api/scan'}>
+            {apiHost}
+          </span>
         </div>
       </div>
     </header>

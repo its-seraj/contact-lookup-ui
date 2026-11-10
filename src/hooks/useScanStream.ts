@@ -220,11 +220,19 @@ export function useScanStream() {
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
-      const rawBase = customBaseUrl?.trim() ? customBaseUrl.trim().replace(/\/$/, '') : '';
+      const envBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+      const baseToUse = customBaseUrl?.trim() || envBase || '';
+      const rawBase = baseToUse.replace(/\/$/, '');
       let endpoint = '/api/scan';
       if (rawBase) {
         const normalized = rawBase.replace(/:\/\/0\.0\.0\.0/, '://127.0.0.1');
-        endpoint = normalized.endsWith('/api/scan') ? normalized : `${normalized}/api/scan`;
+        if (normalized.endsWith('/api/scan')) {
+          endpoint = normalized;
+        } else if (normalized.endsWith('/api')) {
+          endpoint = `${normalized}/scan`;
+        } else {
+          endpoint = `${normalized}/api/scan`;
+        }
       }
 
       try {

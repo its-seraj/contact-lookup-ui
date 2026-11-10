@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://its-seraj-contact-lookup.hf.space/api/:path*"
+    }
+  ]
+}
+
