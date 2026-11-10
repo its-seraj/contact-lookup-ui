@@ -8,11 +8,6 @@ import {
   ArrowUpDown,
   Copy,
   Check,
-  Star,
-  ShieldCheck,
-  Building2,
-  CheckSquare,
-  Square,
 } from 'lucide-react';
 import { LinkedinIcon, GithubIcon } from './Icons';
 import type { ContactRow } from '../types/enrichment';
@@ -26,29 +21,9 @@ interface ContactsGridProps {
   domainName?: string;
 }
 
-type FilterTab = 'all' | 'verified' | 'with_email' | 'with_linkedin' | 'leadership';
-type SortField = 'full_name' | 'title' | 'confidence' | 'domain';
+type FilterTab = 'all' | 'with_email' | 'with_linkedin';
+type SortField = 'full_name' | 'title';
 type SortOrder = 'asc' | 'desc';
-
-// Helper to detect executive/leadership seniority
-function isLeadership(title?: string): boolean {
-  if (!title) return false;
-  const t = title.toLowerCase();
-  return (
-    t.includes('founder') ||
-    t.includes('ceo') ||
-    t.includes('cto') ||
-    t.includes('cfo') ||
-    t.includes('coo') ||
-    t.includes('vp') ||
-    t.includes('vice president') ||
-    t.includes('director') ||
-    t.includes('head of') ||
-    t.includes('lead') ||
-    t.includes('chief') ||
-    t.includes('partner')
-  );
-}
 
 export const ContactsGrid: React.FC<ContactsGridProps> = ({
   contacts,
@@ -60,10 +35,8 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [selectedContact, setSelectedContact] = useState<ContactRow | null>(null);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<Set<string>>(new Set());
   const [pageSize, setPageSize] = useState<number>(25);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [bulkCopied, setBulkCopied] = useState(false);
 
   // Email copy handler
   const copyToClipboard = (email: string, e: React.MouseEvent) => {
@@ -71,11 +44,6 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
     navigator.clipboard.writeText(email);
     setCopiedEmail(email);
     setTimeout(() => setCopiedEmail(null), 2000);
-  };
-
-  // Generate unique key for a contact row
-  const getRowId = (c: ContactRow, idx: number) => {
-    return `${c.domain}-${c.full_name || c.github || c.email || idx}`;
   };
 
   // Filtered and sorted contacts
@@ -92,21 +60,16 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
           c.email?.toLowerCase().includes(q) ||
           c.github?.toLowerCase().includes(q) ||
           c.domain?.toLowerCase().includes(q) ||
-          c.sources?.toLowerCase().includes(q) ||
           c.email_status?.toLowerCase().includes(q) ||
           (q === 'valid' && isEmailStatusValid(c.email_status))
       );
     }
 
     // Tab filter
-    if (activeTab === 'verified') {
-      result = result.filter((c) => isEmailStatusValid(c.email_status));
-    } else if (activeTab === 'with_email') {
+    if (activeTab === 'with_email') {
       result = result.filter((c) => Boolean(c.email && c.email.trim()));
     } else if (activeTab === 'with_linkedin') {
       result = result.filter((c) => Boolean(c.linkedin && c.linkedin.trim()));
-    } else if (activeTab === 'leadership') {
-      result = result.filter((c) => isLeadership(c.title));
     }
 
     // Sort
@@ -114,12 +77,9 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
       let valA: string | number = a[sortField] || '';
       let valB: string | number = b[sortField] || '';
 
-      if (sortField === 'confidence') {
-        valA = a.confidence || 0;
-        valB = b.confidence || 0;
-        return sortOrder === 'asc' ? (valA as number) - (valB as number) : (valB as number) - (valA as number);
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return sortOrder === 'asc' ? valA - valB : valB - valA;
       }
-
       valA = String(valA).toLowerCase();
       valB = String(valB).toLowerCase();
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
@@ -141,68 +101,14 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
       setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortField(field);
-      setSortOrder('asc');
-    }
-  };
-
-  // Selection handlers
-  const handleToggleRow = (key: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedRowKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
-  const handleSelectAllVisible = () => {
-    const visibleKeys = paginatedContacts.map(getRowId);
-    const allSelected = visibleKeys.every((k) => selectedRowKeys.has(k));
-
-    setSelectedRowKeys((prev) => {
-      const next = new Set(prev);
-      if (allSelected) {
-        visibleKeys.forEach((k) => next.delete(k));
-      } else {
-        visibleKeys.forEach((k) => next.add(k));
-      }
-      return next;
-    });
-  };
-
-  const areAllVisibleSelected =
-    paginatedContacts.length > 0 &&
-    paginatedContacts.every((c, idx) => selectedRowKeys.has(getRowId(c, idx)));
-
-  // Bulk actions
-  const selectedContacts = useMemo(() => {
-    return contacts.filter((c, idx) => selectedRowKeys.has(getRowId(c, idx)));
-  }, [contacts, selectedRowKeys]);
-
-  const handleExportSelectedCSV = () => {
-    if (selectedContacts.length > 0) {
-      exportToCSV(selectedContacts, `selected_contacts_${domainName || 'enriched'}.csv`);
-    }
-  };
-
-  const handleCopySelectedEmails = () => {
-    const emails = selectedContacts
-      .map((c) => c.email)
-      .filter((e) => Boolean(e && e.trim()))
-      .join(', ');
-
-    if (emails) {
-      navigator.clipboard.writeText(emails);
-      setBulkCopied(true);
-      setTimeout(() => setBulkCopied(false), 2000);
+      setSortOrder('desc');
     }
   };
 
   return (
-    <div className="w-full bg-[#080d19] border border-slate-800/90 rounded-2xl shadow-2xl overflow-hidden relative">
+    <div className="w-full bg-[#0d1322] border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
       {/* Table Toolbar */}
-      <div className="p-4 border-b border-slate-800/80 bg-[#0a1020]/90 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3">
+      <div className="p-4 border-b border-slate-800/80 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
         {/* Search Input */}
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -213,101 +119,67 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            placeholder="Search leads by name, title, email, domain or source..."
-            className="w-full pl-10 pr-4 py-2 bg-[#050812] border border-slate-800 rounded-xl text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition"
+            placeholder="Search by name, role, email, or handle..."
+            className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition"
           />
         </div>
 
-        {/* Segment Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 xl:pb-0">
+        {/* Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
           <button
             type="button"
             onClick={() => {
               setActiveTab('all');
               setCurrentPage(1);
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap ${
               activeTab === 'all'
-                ? 'bg-sky-600 text-white shadow-xs'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700'
+                ? 'bg-sky-600 text-white shadow-sm'
+                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
-            All Leads ({contacts.length})
+            All ({contacts.length})
           </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('verified');
-              setCurrentPage(1);
-            }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'verified'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Verified ({contacts.filter((c) => isEmailStatusValid(c.email_status)).length})</span>
-          </button>
-
           <button
             type="button"
             onClick={() => {
               setActiveTab('with_email');
               setCurrentPage(1);
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap flex items-center gap-1.5 ${
               activeTab === 'with_email'
-                ? 'bg-amber-600 text-white shadow-xs'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
-            <Mail className="w-3.5 h-3.5 text-amber-400" />
+            <Mail className="w-3 h-3" />
             <span>With Email ({contacts.filter((c) => Boolean(c.email)).length})</span>
           </button>
-
           <button
             type="button"
             onClick={() => {
               setActiveTab('with_linkedin');
               setCurrentPage(1);
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap flex items-center gap-1.5 ${
               activeTab === 'with_linkedin'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
-            <LinkedinIcon className="w-3.5 h-3.5 text-blue-400" />
-            <span>LinkedIn ({contacts.filter((c) => Boolean(c.linkedin)).length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('leadership');
-              setCurrentPage(1);
-            }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'leadership'
-                ? 'bg-purple-600 text-white shadow-xs'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 hover:border-slate-700'
-            }`}
-          >
-            <Star className="w-3.5 h-3.5 text-purple-400" />
-            <span>Leadership ({contacts.filter((c) => isLeadership(c.title)).length})</span>
+            <LinkedinIcon className="w-3 h-3" />
+            <span>With LinkedIn ({contacts.filter((c) => Boolean(c.linkedin)).length})</span>
           </button>
         </div>
 
-        {/* Global Export Buttons */}
+        {/* Export Buttons */}
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => exportToCSV(filteredContacts, `contacts_${domainName || 'enriched'}.csv`)}
             disabled={filteredContacts.length === 0}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-800 hover:border-slate-700 flex items-center gap-1.5 transition disabled:opacity-40 cursor-pointer shadow-xs"
-            title="Export filtered records to CSV"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 flex items-center gap-1.5 transition disabled:opacity-50"
+            title="Download CSV"
           >
             <Download className="w-3.5 h-3.5 text-emerald-400" />
             <span>CSV</span>
@@ -316,8 +188,8 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
             type="button"
             onClick={() => exportToJSON(filteredContacts, `contacts_${domainName || 'enriched'}.json`)}
             disabled={filteredContacts.length === 0}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-800 hover:border-slate-700 flex items-center gap-1.5 transition disabled:opacity-40 cursor-pointer shadow-xs"
-            title="Export filtered records to JSON"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 flex items-center gap-1.5 transition disabled:opacity-50"
+            title="Download JSON"
           >
             <Download className="w-3.5 h-3.5 text-sky-400" />
             <span>JSON</span>
@@ -329,135 +201,71 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-800 bg-[#060a14] text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none">
-              {/* Checkbox column */}
-              <th className="py-3.5 px-4 w-10">
-                <button
-                  type="button"
-                  onClick={handleSelectAllVisible}
-                  className="flex items-center text-slate-400 hover:text-white cursor-pointer"
-                  title={areAllVisibleSelected ? 'Deselect all visible' : 'Select all visible'}
-                >
-                  {areAllVisibleSelected ? (
-                    <CheckSquare className="w-4 h-4 text-sky-400" />
-                  ) : (
-                    <Square className="w-4 h-4 text-slate-600" />
-                  )}
-                </button>
-              </th>
-
-              <th className="py-3.5 px-4">
+            <tr className="border-b border-slate-800 bg-slate-950/70 text-[11px] font-semibold text-slate-400 uppercase tracking-wider select-none">
+              <th className="py-3 px-4">
                 <button
                   type="button"
                   onClick={() => toggleSort('full_name')}
-                  className="flex items-center gap-1 hover:text-slate-200 cursor-pointer"
+                  className="flex items-center gap-1 hover:text-slate-200"
                 >
                   <span>Contact Name</span>
-                  <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                  <ArrowUpDown className="w-3 h-3" />
                 </button>
               </th>
-
-              <th className="py-3.5 px-4">
+              <th className="py-3 px-4">
                 <button
                   type="button"
                   onClick={() => toggleSort('title')}
-                  className="flex items-center gap-1 hover:text-slate-200 cursor-pointer"
+                  className="flex items-center gap-1 hover:text-slate-200"
                 >
                   <span>Role & Title</span>
-                  <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                  <ArrowUpDown className="w-3 h-3" />
                 </button>
               </th>
-
-              <th className="py-3.5 px-4">Work Email & Status</th>
-
-              <th className="py-3.5 px-4">
-                <button
-                  type="button"
-                  onClick={() => toggleSort('confidence')}
-                  className="flex items-center gap-1 hover:text-slate-200 cursor-pointer"
-                >
-                  <span>Confidence</span>
-                  <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                </button>
-              </th>
-
-              <th className="py-3.5 px-4">Profiles</th>
-              <th className="py-3.5 px-4">Waterfall Sources</th>
-              <th className="py-3.5 px-4 text-right">Dossier</th>
+              <th className="py-3 px-4">Email Address</th>
+              <th className="py-3 px-4">Profiles</th>
+              <th className="py-3 px-4">Sources</th>
+              <th className="py-3 px-4 text-right">Details</th>
             </tr>
           </thead>
-
           <tbody className="divide-y divide-slate-800/60 text-xs">
             {paginatedContacts.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-16 text-center text-slate-500">
-                  <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
-                    <Filter className="w-8 h-8 text-slate-600 mb-1" />
-                    <p className="text-sm font-semibold text-slate-300">No matching contacts found</p>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      Try clearing your search query or switching to another filter tab above.
+                <td colSpan={6} className="py-12 text-center text-slate-500">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <Filter className="w-6 h-6 text-slate-600" />
+                    <p className="text-sm font-medium text-slate-400">No matching contacts found</p>
+                    <p className="text-xs text-slate-600">
+                      Try adjusting your search query or switching the filter tab.
                     </p>
                   </div>
                 </td>
               </tr>
             ) : (
               paginatedContacts.map((contact, index) => {
-                const rowKey = getRowId(contact, index);
-                const isSelected = selectedRowKeys.has(rowKey);
                 const displayName =
                   contact.full_name ||
                   (contact.github ? `@${contact.github}` : 'Unnamed Contact');
-                const initial =
-                  contact.first_name?.[0] ||
-                  contact.last_name?.[0] ||
-                  displayName.replace(/^@/, '')[0] ||
-                  '?';
-
-                const isLeader = isLeadership(contact.title);
+                const initial = displayName.replace(/^@/, '')[0] || '?';
 
                 return (
                   <tr
-                    key={rowKey}
+                    key={`${contact.domain}-${contact.github || contact.email || index}`}
                     onClick={() => setSelectedContact(contact)}
-                    className={`hover:bg-[#0c1324] cursor-pointer transition group ${
-                      isSelected ? 'bg-sky-950/20' : ''
-                    }`}
+                    className="hover:bg-slate-900/60 cursor-pointer transition group"
                   >
-                    {/* Row Checkbox */}
-                    <td className="py-3 px-4 w-10" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={(e) => handleToggleRow(rowKey, e)}
-                        className="flex items-center text-slate-400 hover:text-white cursor-pointer"
-                      >
-                        {isSelected ? (
-                          <CheckSquare className="w-4 h-4 text-sky-400" />
-                        ) : (
-                          <Square className="w-4 h-4 text-slate-600 group-hover:text-slate-400" />
-                        )}
-                      </button>
-                    </td>
-
-                    {/* Contact Name & Domain */}
+                    {/* Contact Name & Avatar */}
                     <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-600/40 to-indigo-600/40 border border-slate-700/80 flex items-center justify-center text-xs font-bold text-white uppercase shrink-0 shadow-xs">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-700/60 to-indigo-700/60 border border-slate-700 flex items-center justify-center text-xs font-bold text-white uppercase shrink-0">
                           {initial}
                         </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-semibold text-slate-100 group-hover:text-sky-300 transition">
-                              {displayName}
-                            </span>
-                            {isLeader && (
-                              <span className="px-1.5 py-0.2 text-[9px] font-semibold uppercase rounded bg-purple-950 text-purple-300 border border-purple-800">
-                                Lead
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
-                            <Building2 className="w-2.5 h-2.5 text-slate-600" />
-                            <span>{contact.domain}</span>
+                        <div>
+                          <p className="font-medium text-slate-100 group-hover:text-sky-300 transition">
+                            {displayName}
+                          </p>
+                          <span className="text-[10px] text-slate-500 font-mono">
+                            {contact.domain}
                           </span>
                         </div>
                       </div>
@@ -465,70 +273,44 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
 
                     {/* Title */}
                     <td className="py-3 px-4 max-w-xs">
-                      <p className="text-slate-300 truncate font-medium" title={contact.title}>
+                      <p className="text-slate-300 truncate" title={contact.title}>
                         {contact.title || <span className="text-slate-600 italic">—</span>}
                       </p>
                     </td>
 
-                    {/* Email & Status */}
+                    {/* Email */}
                     <td className="py-3 px-4">
                       {contact.email ? (
                         <div className="flex items-center gap-2">
-                          <span
-                            className="font-mono text-slate-200 truncate max-w-[190px] select-all font-medium text-[11px]"
-                            title={contact.email}
-                          >
+                          <span className="font-mono text-slate-200 truncate max-w-[200px]" title={contact.email}>
                             {contact.email}
                           </span>
                           <button
                             type="button"
                             onClick={(e) => copyToClipboard(contact.email, e)}
-                            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-                            title="Copy email to clipboard"
+                            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                            title="Copy email"
                           >
                             {copiedEmail === contact.email ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <Check className="w-3 h-3 text-emerald-400" />
                             ) : (
-                              <Copy className="w-3.5 h-3.5" />
+                              <Copy className="w-3 h-3" />
                             )}
                           </button>
                           {getEmailStatusBadge(contact.email_status, contact.email)}
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5">
-                          <span className="text-slate-500 italic text-[11px]">Unresolved</span>
+                          <span className="text-slate-600 italic">Unresolved</span>
                           {getEmailStatusBadge(contact.email_status, '')}
                         </div>
                       )}
                     </td>
 
-                    {/* Confidence Score */}
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-12 bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              (contact.confidence || 0) >= 80
-                                ? 'bg-emerald-500'
-                                : (contact.confidence || 0) >= 60
-                                ? 'bg-amber-500'
-                                : 'bg-slate-600'
-                            }`}
-                            style={{ width: `${Math.min(100, contact.confidence || 60)}%` }}
-                          />
-                        </div>
-                        <span className="font-mono text-[11px] font-semibold text-slate-300">
-                          {contact.confidence || 60}%
-                        </span>
-                      </div>
-                    </td>
 
-                    {/* Profiles */}
+                    {/* Profiles (LinkedIn & GitHub) */}
                     <td className="py-3 px-4">
-                      <div
-                        className="flex items-center gap-1.5"
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         {contact.linkedin && (
                           <a
                             href={contact.linkedin}
@@ -546,7 +328,7 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
                             href={`https://github.com/${contact.github}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition font-mono"
+                            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition"
                             title={`GitHub: @${contact.github}`}
                           >
                             <GithubIcon className="w-3.5 h-3.5" />
@@ -559,14 +341,14 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
                       </div>
                     </td>
 
-                    {/* Waterfall Sources */}
+                    {/* Sources */}
                     <td className="py-3 px-4">
-                      <div className="flex items-center gap-1 flex-wrap max-w-xs">
+                      <div className="flex items-center gap-1 flex-wrap">
                         {contact.sources ? (
                           contact.sources.split(';').map((s) => (
                             <span
                               key={s}
-                              className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-900 text-slate-300 border border-slate-800"
+                              className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-slate-900 text-slate-400 border border-slate-800"
                             >
                               {s}
                             </span>
@@ -577,7 +359,7 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
                       </div>
                     </td>
 
-                    {/* Dossier Action Button */}
+                    {/* Actions */}
                     <td className="py-3 px-4 text-right">
                       <button
                         type="button"
@@ -585,7 +367,7 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
                           e.stopPropagation();
                           setSelectedContact(contact);
                         }}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-700 transition text-xs font-semibold cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
                       >
                         <span>View</span>
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -600,7 +382,7 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
       </div>
 
       {/* Pagination Footer */}
-      <div className="p-4 border-t border-slate-800 bg-[#060a14] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+      <div className="p-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
         <div className="flex items-center gap-2">
           <span>Show:</span>
           <select
@@ -609,37 +391,37 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
               setPageSize(Number(e.target.value));
               setCurrentPage(1);
             }}
-            className="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-sky-500 cursor-pointer"
+            className="px-2 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none"
           >
             <option value={10}>10 rows</option>
             <option value={25}>25 rows</option>
             <option value={50}>50 rows</option>
             <option value={100}>100 rows</option>
           </select>
-          <span className="text-slate-500 font-mono">
+          <span className="text-slate-500">
             Showing {Math.min((currentPage - 1) * pageSize + 1, filteredContacts.length)} -{' '}
             {Math.min(currentPage * pageSize, filteredContacts.length)} of {filteredContacts.length}
           </span>
         </div>
 
         {totalPages > 1 && (
-          <div className="flex items-center gap-1 font-mono">
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
             >
               Previous
             </button>
-            <span className="px-3 py-1 text-slate-300">
+            <span className="px-3 py-1 font-mono text-slate-300">
               Page {currentPage} of {totalPages}
             </span>
             <button
               type="button"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
             >
               Next
             </button>
@@ -647,49 +429,7 @@ export const ContactsGrid: React.FC<ContactsGridProps> = ({
         )}
       </div>
 
-      {/* Floating Bulk Action Dock when rows are selected */}
-      {selectedRowKeys.size > 0 && (
-        <div className="sticky bottom-4 left-0 right-0 mx-auto max-w-lg z-30 px-4 animate-in fade-in slide-in-from-bottom-3 duration-150">
-          <div className="p-2.5 px-4 rounded-2xl bg-[#0e162d]/95 border border-sky-500/40 backdrop-blur-md shadow-2xl flex items-center justify-between text-xs text-white">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
-              <span className="font-bold text-sky-200 font-mono">
-                {selectedRowKeys.size} {selectedRowKeys.size === 1 ? 'lead' : 'leads'} selected
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleCopySelectedEmails}
-                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center gap-1.5 transition font-medium cursor-pointer shadow-xs"
-              >
-                {bulkCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{bulkCopied ? 'Copied!' : 'Copy Emails'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleExportSelectedCSV}
-                className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white flex items-center gap-1.5 transition font-semibold cursor-pointer shadow-xs"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export CSV</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedRowKeys(new Set())}
-                className="text-slate-400 hover:text-slate-200 ml-1 text-xs cursor-pointer"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Detailed Dossier Inspector Modal */}
+      {/* Modal Details Inspection */}
       <ContactDetailsModal
         contact={selectedContact}
         onClose={() => setSelectedContact(null)}

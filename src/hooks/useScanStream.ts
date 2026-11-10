@@ -10,7 +10,6 @@ import type {
 } from '../types/enrichment';
 import { SAMPLE_COUNTS, SAMPLE_LOGS, SAMPLE_META, SAMPLE_ROWS } from '../data/sampleData';
 import { mergeRows, replaceDomain } from '../utils/rowKey';
-import { normalizeApiBase, STORAGE_KEY_SERVER_URL } from './useServerHealth';
 
 function parseLogType(message: string): LogMessage['type'] {
   const trimmed = message.trim();
@@ -221,10 +220,12 @@ export function useScanStream() {
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
-      const savedUrl =
-        typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY_SERVER_URL) : null;
-      const targetBase = normalizeApiBase(customBaseUrl || savedUrl);
-      const endpoint = `${targetBase}/api/scan`;
+      const rawBase = customBaseUrl?.trim() ? customBaseUrl.trim().replace(/\/$/, '') : '';
+      let endpoint = '/api/scan';
+      if (rawBase) {
+        const normalized = rawBase.replace(/:\/\/0\.0\.0\.0/, '://127.0.0.1');
+        endpoint = normalized.endsWith('/api/scan') ? normalized : `${normalized}/api/scan`;
+      }
 
       try {
         appendLog(request.domains[0], `  [*] Connecting to ${endpoint}...`);
