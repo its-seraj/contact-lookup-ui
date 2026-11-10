@@ -54,8 +54,6 @@ export function App() {
     startScan,
     stopScan,
     reset,
-    loadSampleData,
-    simulateStreamDemo,
   } = useScanStream();
 
   const handleStartScan = () => {
@@ -67,16 +65,6 @@ export function App() {
       },
       serverUrl
     );
-  };
-
-  const handleQuickDemo = () => {
-    setDomains(['bamboobox.ai']);
-    loadSampleData();
-  };
-
-  const handleSimulateDemo = () => {
-    setDomains(['bamboobox.ai']);
-    simulateStreamDemo();
   };
 
   const hasResults = results.length > 0;
@@ -92,8 +80,6 @@ export function App() {
         isServerOnline={isServerOnline}
         serverLatencyMs={serverLatencyMs}
         onOpenServerModal={() => setIsServerModalOpen(true)}
-        onLoadSample={handleQuickDemo}
-        onSimulateStream={handleSimulateDemo}
         onReset={reset}
       />
 
@@ -141,13 +127,6 @@ export function App() {
                 >
                   <Settings className="w-3 h-3" />
                   <span>Configure Server ({serverUrl.replace(/^https?:\/\//, '')})</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleQuickDemo}
-                  className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 text-[11px] font-medium border border-slate-700 transition cursor-pointer"
-                >
-                  Load Offline Sample Dataset
                 </button>
               </div>
             </div>
@@ -258,24 +237,16 @@ export function App() {
               </div>
             </div>
 
-            {/* Quick Demo CTA Buttons */}
+            {/* Action CTA */}
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <button
                 type="button"
-                onClick={handleQuickDemo}
-                className="px-4 py-2.5 text-xs font-semibold rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white flex items-center gap-2 transition shadow-lg shadow-sky-600/20 active:scale-95 cursor-pointer"
+                onClick={handleStartScan}
+                disabled={domains.length === 0}
+                className="px-6 py-3 text-xs font-bold uppercase tracking-wider rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white flex items-center gap-2 transition shadow-lg shadow-sky-600/25 active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Database className="w-3.5 h-3.5" />
-                <span>Load BambooBox Demo Dataset (84 Leads)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSimulateDemo}
-                className="px-4 py-2.5 text-xs font-semibold rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-800 hover:border-slate-700 flex items-center gap-2 transition active:scale-95 cursor-pointer"
-              >
-                <Play className="w-3.5 h-3.5 text-sky-400 fill-sky-400/40" />
-                <span>Simulate Live Pipeline Stream</span>
+                <Play className="w-4 h-4 fill-white" />
+                <span>{domains.length > 0 ? `Start Scan for ${domains[0]}` : 'Enter Target Domain Above'}</span>
               </button>
             </div>
           </div>

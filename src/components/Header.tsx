@@ -3,8 +3,6 @@ import {
   Layers,
   CheckCircle2,
   Loader2,
-  Database,
-  Play,
   RotateCcw,
   Server,
   Activity,
@@ -15,8 +13,6 @@ interface HeaderProps {
   status?: ScanStatus;
   isScanning?: boolean;
   totalResults?: number;
-  onLoadSample?: () => void;
-  onSimulateStream?: () => void;
   onReset?: () => void;
   serverUrl?: string;
   isServerOnline?: boolean | null;
@@ -28,8 +24,6 @@ export const Header: React.FC<HeaderProps> = ({
   status = 'idle',
   isScanning = false,
   totalResults = 0,
-  onLoadSample,
-  onSimulateStream,
   onReset,
   serverUrl = 'https://its-seraj-contact-lookup.hf.space',
   isServerOnline = true,
@@ -138,33 +132,6 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
-
-          {/* Quick Demo Controls */}
-          {onLoadSample && (
-            <button
-              type="button"
-              onClick={onLoadSample}
-              disabled={isScanning}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-800 hover:border-slate-700 flex items-center gap-1.5 transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer"
-              title="Load offline sample dataset (BambooBox)"
-            >
-              <Database className="w-3.5 h-3.5 text-sky-400" />
-              <span className="hidden sm:inline">Sample</span>
-            </button>
-          )}
-
-          {onSimulateStream && (
-            <button
-              type="button"
-              onClick={onSimulateStream}
-              disabled={isScanning}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-sky-950/60 hover:bg-sky-900/60 text-sky-300 hover:text-sky-100 border border-sky-800/70 hover:border-sky-700 flex items-center gap-1.5 transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer"
-              title="Simulate real-time streaming pipeline"
-            >
-              <Play className="w-3.5 h-3.5 text-sky-400 fill-sky-400/40" />
-              <span className="hidden sm:inline">Simulate</span>
-            </button>
-          )}
 
           {totalResults > 0 && onReset && !isScanning && (
             <button
