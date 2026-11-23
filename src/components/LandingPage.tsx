@@ -18,7 +18,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [activeTargets, setActiveTargets] = useState<string[]>(['dbs.com', 'linear.app', 'stripe.com']);
   const [linkedinEnabled, setLinkedinEnabled] = useState(true);
   const [verifyEnabled, setVerifyEnabled] = useState(true);
-  const [ctaEmail, setCtaEmail] = useState('');
   const [selectedDemoContact, setSelectedDemoContact] = useState<any | null>(null);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
@@ -148,15 +147,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     const next = suggestions.find((s) => !activeTargets.includes(s));
     if (next) {
       setActiveTargets((prev) => [...prev, next]);
-    }
-  };
-
-  const handleCtaSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isAuthenticated) {
-      onGoToConsole();
-    } else {
-      triggerGoogleSignIn();
     }
   };
 
