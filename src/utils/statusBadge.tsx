@@ -1,52 +1,49 @@
-/**
- * Returns true if the email status represents a deliverable / valid address
- * (verified, valid, or greylisted).
- */
 export function isEmailStatusValid(status?: string | null): boolean {
   if (!status) return false;
   const s = status.toLowerCase().trim();
-  return s === 'verified' || s === 'valid' || s === 'greylisted' || s === 'greylist';
+  return (
+    s === 'verified' ||
+    s === 'valid' ||
+    s === 'greylisted' ||
+    s === 'greylist' ||
+    s.includes('99') ||
+    s.includes('valid')
+  );
 }
 
-/**
- * Renders the status badge for a contact's email address.
- * If status is 'verified', displays 'verified' (green).
- * If status is 'greylisted' or 'valid', displays 'valid' (green).
- * If email exists but unverified, displays 'unverified' (amber).
- * Otherwise, displays 'name only' (slate).
- */
 export function getEmailStatusBadge(status?: string | null, email?: string | null) {
   const s = status?.toLowerCase().trim();
-  if (s === 'verified') {
+
+  if (s === 'verified' || s === 'valid' || s === 'greylisted' || s === 'greylist') {
     return (
       <span
-        className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-950 text-emerald-400 border border-emerald-800"
-        title="Verified deliverable"
+        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-data-mono-sm text-data-mono-sm font-semibold"
+        title="Direct MX Handshake Verified"
       >
-        verified
+        <span className="material-symbols-outlined text-[13px]">check</span>
+        <span>Valid</span>
       </span>
     );
   }
-  if (s === 'greylisted' || s === 'greylist' || s === 'valid') {
-    return (
-      <span
-        className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-950 text-emerald-400 border border-emerald-800"
-        title={s.startsWith('grey') ? 'Greylisted (treated as valid)' : 'Valid deliverable'}
-      >
-        valid
-      </span>
-    );
-  }
+
   if (email && email.trim()) {
     return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-950 text-amber-400 border border-amber-800">
-        unverified
+      <span
+        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-data-mono-sm text-data-mono-sm font-semibold"
+        title="Pattern resolved, direct MX handshake pending"
+      >
+        <span className="material-symbols-outlined text-[13px]">help_outline</span>
+        <span>Pattern Guess</span>
       </span>
     );
   }
+
   return (
-    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-900 text-slate-500 border border-slate-800">
-      name only
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container text-secondary font-data-mono-sm text-data-mono-sm font-medium"
+      title="Profile found without resolvable email"
+    >
+      Name only
     </span>
   );
 }

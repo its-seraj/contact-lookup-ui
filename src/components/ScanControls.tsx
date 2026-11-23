@@ -1,5 +1,4 @@
 import React from 'react';
-import { Mail, Play, Square, RotateCcw, ShieldCheck, Search } from 'lucide-react';
 import { LinkedinIcon } from './Icons';
 
 interface ScanControlsProps {
@@ -28,7 +27,7 @@ export const ScanControls: React.FC<ScanControlsProps> = ({
   disabled,
 }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-[#0d1322] p-4 rounded-2xl border border-slate-800/80 shadow-xl shadow-black/20">
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-space-md items-center bg-surface-container-lowest p-5 rounded-2xl border border-surface-container shadow-sm">
       {/* Toggle: LinkedIn Discovery */}
       <div
         role="button"
@@ -40,41 +39,37 @@ export const ScanControls: React.FC<ScanControlsProps> = ({
             onChangeLinkedin(!isLinkedin);
           }
         }}
-        className={`md:col-span-4 p-3 rounded-xl border transition select-none flex items-center justify-between group ${
-          isScanning ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-slate-700/80'
+        className={`md:col-span-4 p-3.5 rounded-xl border transition select-none flex items-center justify-between group ${
+          isScanning ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-primary-fixed'
         } ${
           isLinkedin
-            ? 'bg-slate-900/80 border-slate-800 shadow-sm shadow-sky-500/5'
-            : 'bg-slate-900/40 border-slate-800/60'
+            ? 'bg-surface-container-low border-surface-container shadow-sm'
+            : 'bg-surface border-surface-container'
         }`}
       >
-        <div>
-          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-300 group-hover:text-white transition-colors">
-            <LinkedinIcon className="w-3.5 h-3.5 text-blue-400" />
-            <span>LinkedIn Discovery</span>
+        <div className="flex flex-col">
+          <div className="flex items-center gap-1.5">
+            <LinkedinIcon className="w-4 h-4 text-[#0a66c2]" />
+            <span className="font-label-md text-label-md font-semibold text-on-surface">
+              LinkedIn Discovery
+            </span>
           </div>
-          <div className="mt-1 flex items-center gap-1 text-[11px]">
-            {isLinkedin ? (
-              <span className="flex items-center gap-1 text-sky-400 font-medium">
-                <Search className="w-3 h-3" />
-                <span>Enabled</span>
-              </span>
-            ) : (
-              <span className="text-slate-500 font-medium">Disabled</span>
-            )}
-          </div>
+          <span className="font-data-mono-sm text-data-mono-sm text-primary-container flex items-center gap-1 mt-0.5">
+            <span className="material-symbols-outlined text-[13px]">search</span>
+            {isLinkedin ? 'Active Graph Spider' : 'Disabled'}
+          </span>
         </div>
 
         <div
           role="switch"
           aria-checked={isLinkedin}
-          className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-            isLinkedin ? 'bg-sky-500' : 'bg-slate-700'
+          className={`w-10 h-5 rounded-full relative transition-colors duration-200 ease-in-out flex items-center p-0.5 ${
+            isLinkedin ? 'bg-primary-container' : 'bg-outline-variant'
           }`}
         >
-          <span
-            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-              isLinkedin ? 'translate-x-4' : 'translate-x-0'
+          <div
+            className={`w-4 h-4 bg-surface-container-lowest rounded-full shadow-sm transition-transform duration-200 ease-in-out ${
+              isLinkedin ? 'ml-auto' : 'ml-0'
             }`}
           />
         </div>
@@ -91,78 +86,78 @@ export const ScanControls: React.FC<ScanControlsProps> = ({
             onChangeVerify(!isVerify);
           }
         }}
-        className={`md:col-span-4 p-3 rounded-xl border transition select-none flex items-center justify-between group ${
-          isScanning ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-slate-700/80'
+        className={`md:col-span-4 p-3.5 rounded-xl border transition select-none flex items-center justify-between group ${
+          isScanning ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-tertiary-fixed'
         } ${
           isVerify
-            ? 'bg-slate-900/80 border-slate-800 shadow-sm shadow-emerald-500/5'
-            : 'bg-slate-900/40 border-slate-800/60'
+            ? 'bg-surface-container-low border-surface-container shadow-sm'
+            : 'bg-surface border-surface-container'
         }`}
       >
-        <div>
-          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-300 group-hover:text-white transition-colors">
-            <Mail className="w-3.5 h-3.5 text-sky-400" />
-            <span>Email Verification</span>
+        <div className="flex flex-col">
+          <div className="flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[18px] text-tertiary">mail</span>
+            <span className="font-label-md text-label-md font-semibold text-on-surface">
+              Email Verification
+            </span>
           </div>
-          <div className="mt-1 flex items-center gap-1 text-[11px]">
-            {isVerify ? (
-              <span className="flex items-center gap-1 text-emerald-400 font-medium">
-                <ShieldCheck className="w-3 h-3" />
-                <span>Enabled</span>
-              </span>
-            ) : (
-              <span className="text-slate-500 font-medium">Disabled</span>
-            )}
-          </div>
+          <span className="font-data-mono-sm text-data-mono-sm text-tertiary flex items-center gap-1 mt-0.5">
+            <span className="material-symbols-outlined text-[13px]">check_circle</span>
+            {isVerify ? 'Direct MX Handshake' : 'Pattern Guess Only'}
+          </span>
         </div>
 
         <div
           role="switch"
           aria-checked={isVerify}
-          className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-            isVerify ? 'bg-emerald-500' : 'bg-slate-700'
+          className={`w-10 h-5 rounded-full relative transition-colors duration-200 ease-in-out flex items-center p-0.5 ${
+            isVerify ? 'bg-tertiary' : 'bg-outline-variant'
           }`}
         >
-          <span
-            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-              isVerify ? 'translate-x-4' : 'translate-x-0'
+          <div
+            className={`w-4 h-4 bg-surface-container-lowest rounded-full shadow-sm transition-transform duration-200 ease-in-out ${
+              isVerify ? 'ml-auto' : 'ml-0'
             }`}
           />
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="md:col-span-4 flex items-center gap-2">
-        {!isScanning ? (
+      {/* Action Buttons: Start, Stop, Reset */}
+      <div className="md:col-span-4 flex items-center justify-end gap-2.5">
+        {hasResults && !isScanning && (
           <button
             type="button"
-            onClick={onStartScan}
-            disabled={disabled}
-            className="flex-1 h-11 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-medium text-sm flex items-center justify-center gap-2 shadow-lg shadow-sky-500/25 active:scale-[0.98] transition disabled:opacity-40 disabled:cursor-not-allowed"
+            onClick={onReset}
+            className="h-11 px-3.5 rounded-xl bg-surface-container-low hover:bg-surface-container text-secondary hover:text-on-surface font-label-md text-xs font-semibold transition-colors flex items-center gap-1.5 border border-surface-container"
+            title="Reset dataset and logs"
           >
-            <Play className="w-4 h-4 fill-white" />
-            <span>Scan & Enrich</span>
+            <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+            <span>Reset</span>
+          </button>
+        )}
+
+        {isScanning ? (
+          <button
+            type="button"
+            onClick={onStopScan}
+            className="h-11 px-5 rounded-xl bg-error text-on-error font-label-md text-xs font-semibold hover:bg-error/90 transition-all shadow-md flex items-center gap-2"
+          >
+            <span className="w-2.5 h-2.5 rounded-sm bg-on-error animate-pulse"></span>
+            <span>Abort Scan</span>
           </button>
         ) : (
           <button
             type="button"
-            onClick={onStopScan}
-            className="flex-1 h-11 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-medium text-sm flex items-center justify-center gap-2 shadow-lg shadow-rose-600/25 active:scale-[0.98] transition animate-pulse"
+            onClick={onStartScan}
+            disabled={disabled}
+            className={`h-11 px-6 rounded-xl font-label-md text-xs font-semibold transition-all flex items-center gap-2 shadow-md ${
+              disabled
+                ? 'bg-surface-container-high text-secondary cursor-not-allowed shadow-none'
+                : 'bg-primary text-on-primary hover:bg-primary-container cursor-pointer'
+            }`}
           >
-            <Square className="w-4 h-4 fill-white" />
-            <span>Stop Scan</span>
-          </button>
-        )}
-
-        {(hasResults || isScanning) && (
-          <button
-            type="button"
-            onClick={onReset}
-            disabled={isScanning}
-            className="h-11 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 transition disabled:opacity-40 flex items-center justify-center"
-            title="Reset form and clear results"
-          >
-            <RotateCcw className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+            <span>Scan &amp; Enrich</span>
           </button>
         )}
       </div>

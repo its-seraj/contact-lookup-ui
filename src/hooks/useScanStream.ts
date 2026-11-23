@@ -10,6 +10,8 @@ import type {
 } from '../types/enrichment';
 import { SAMPLE_COUNTS, SAMPLE_LOGS, SAMPLE_META, SAMPLE_ROWS } from '../data/sampleData';
 import { mergeRows, replaceDomain } from '../utils/rowKey';
+import { useAuth } from './useAuth';
+import { STORAGE_KEY_ACCESS } from '../context/authContextDef';
 
 function parseLogType(message: string): LogMessage['type'] {
   const trimmed = message.trim();
@@ -24,6 +26,7 @@ function parseLogType(message: string): LogMessage['type'] {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function useScanStream() {
+  const { refreshSession, logout } = useAuth();
   const [status, setStatus] = useState<ScanStatus>('idle');
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogMessage[]>([]);
@@ -238,12 +241,31 @@ export function useScanStream() {
       try {
         appendLog(request.domains[0], `  [*] Connecting to ${endpoint}...`);
 
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(request),
-          signal: controller.signal,
-        });
+        const doFetch = () => {
+          const token = localStorage.getItem(STORAGE_KEY_ACCESS);
+          return fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(request),
+            signal: controller.signal,
+          });
+        };
+
+        let response = await doFetch();
+
+        // Access token expired: refresh once and retry
+        if (response.status === 401) {
+          if (await refreshSession()) {
+            response = await doFetch();
+          }
+          if (response.status === 401) {
+            void logout();
+            throw new Error('Session expired. Please sign in again.');
+          }
+        }
 
         if (!response.ok) {
           throw new Error(`Server returned HTTP ${response.status}: ${response.statusText}`);
@@ -298,7 +320,7 @@ export function useScanStream() {
         abortControllerRef.current = null;
       }
     },
-    [activeDomain, appendLog, handleEvent, reset]
+    [activeDomain, appendLog, handleEvent, reset, refreshSession, logout]
   );
 
   return {

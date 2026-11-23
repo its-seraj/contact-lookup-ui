@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import type { KeyboardEvent, ClipboardEvent } from 'react';
-import { Globe, X } from 'lucide-react';
 
 interface DomainChipInputProps {
   domains: string[];
@@ -56,14 +55,12 @@ export const DomainChipInput: React.FC<DomainChipInputProps> = ({
 
     e.preventDefault();
     const pasteData = e.clipboardData.getData('text');
-    // Split by comma, space, newline, or tab
     const parts = pasteData.split(/[\s,;\n\r]+/);
     const valid = parts
       .map(cleanDomain)
       .filter((d) => d.length > 0 && !domains.includes(d));
 
     if (valid.length > 0) {
-      // deduplicate
       const unique = Array.from(new Set([...domains, ...valid]));
       onChange(unique);
       setInputValue('');
@@ -71,25 +68,25 @@ export const DomainChipInput: React.FC<DomainChipInputProps> = ({
   };
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-1.5">
-        <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-          <Globe className="w-3.5 h-3.5 text-sky-400" />
-          <span>Target Domains</span>
-          <span className="text-[10px] text-slate-500 font-normal">
-            (Press Enter, Comma, or paste multiple)
+    <div className="w-full bg-surface-container-lowest border border-surface-container rounded-2xl p-5 shadow-sm space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-semibold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
+          <span className="material-symbols-outlined text-[18px] text-primary-container">public</span>
+          <span>Target Company Domains</span>
+          <span className="text-[11px] text-secondary font-normal lowercase tracking-normal">
+            (press enter or comma to add)
           </span>
         </label>
         {domains.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono text-sky-400 bg-sky-950/60 px-2 py-0.5 rounded-full border border-sky-800/60">
-              {domains.length} {domains.length === 1 ? 'domain' : 'domains'}
+            <span className="text-xs font-data-mono-sm text-primary bg-primary-fixed px-2.5 py-0.5 rounded-full font-semibold">
+              {domains.length} {domains.length === 1 ? 'target' : 'targets'}
             </span>
             {!disabled && (
               <button
                 type="button"
                 onClick={() => onChange([])}
-                className="text-[11px] text-slate-500 hover:text-slate-300 transition"
+                className="text-xs text-secondary hover:text-error transition-colors"
               >
                 Clear all
               </button>
@@ -98,46 +95,42 @@ export const DomainChipInput: React.FC<DomainChipInputProps> = ({
         )}
       </div>
 
+      {/* Input container with chips inside */}
       <div
-        className={`min-h-[46px] w-full p-2 bg-[#0d1322] border rounded-xl flex flex-wrap items-center gap-1.5 transition ${
-          disabled
-            ? 'opacity-60 cursor-not-allowed border-slate-800'
-            : 'border-slate-800 hover:border-slate-700 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20'
+        className={`min-h-[46px] p-2 rounded-xl bg-surface-container-low border transition-all flex flex-wrap items-center gap-2 ${
+          disabled ? 'opacity-70 cursor-not-allowed bg-surface-dim' : 'border-surface-container focus-within:border-primary-container focus-within:bg-surface-container-lowest focus-within:shadow-sm'
         }`}
       >
-        {/* Render Chips */}
-        {domains.map((dom, idx) => (
+        {domains.map((domain, index) => (
           <span
-            key={`${dom}-${idx}`}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-950/70 border border-sky-800/80 text-sky-200 text-xs font-mono font-medium shadow-sm transition group"
+            key={`${domain}-${index}`}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary text-on-primary text-xs font-data-mono font-medium shadow-sm animate-in fade-in"
           >
-            <span>{dom}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-surface-container-lowest"></span>
+            <span>{domain}</span>
             {!disabled && (
               <button
                 type="button"
-                onClick={() => removeDomain(idx)}
-                className="w-4 h-4 rounded-full flex items-center justify-center text-sky-400 hover:bg-sky-900 hover:text-white transition"
-                title={`Remove ${dom}`}
+                onClick={() => removeDomain(index)}
+                className="hover:opacity-75 focus:outline-none flex items-center"
+                title={`Remove ${domain}`}
               >
-                <X className="w-3 h-3" />
+                <span className="material-symbols-outlined text-[14px]">close</span>
               </button>
             )}
           </span>
         ))}
 
-        {/* Text Input */}
         <input
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          onBlur={() => {
-            if (inputValue.trim()) addDomain(inputValue);
-          }}
+          onBlur={() => addDomain(inputValue)}
           disabled={disabled}
-          placeholder={domains.length === 0 ? "e.g. bamboobox.ai, stripe.com..." : "Add another domain..."}
-          className="flex-1 min-w-[160px] bg-transparent text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none py-1 px-1 font-mono text-xs"
+          placeholder={domains.length === 0 ? 'Type domain (e.g. acme.com) and press Enter...' : 'Add another domain...'}
+          className="flex-1 min-w-[200px] bg-transparent text-xs font-body-md text-on-surface placeholder:text-secondary focus:outline-none px-2 py-1"
         />
       </div>
     </div>

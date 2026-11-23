@@ -1,9 +1,8 @@
 import React from 'react';
-import { Users, Mail, CheckCircle2, Clock, Server } from 'lucide-react';
-import { LinkedinIcon } from './Icons';
 import type { ContactRow, ScanCounts, ScanMeta } from '../types/enrichment';
 import { isEmailStatusValid } from '../utils/statusBadge';
 import { formatEnrichTime, parseTimingNumber } from '../utils/timeUtils';
+import { LinkedinIcon } from './Icons';
 
 interface MetricsSummaryProps {
   counts: ScanCounts | null;
@@ -43,7 +42,7 @@ export const MetricsSummary: React.FC<MetricsSummaryProps> = ({
       ? `for ${distinctDomains[0]}`
       : meta?.domain
       ? `for ${meta.domain}`
-      : 'Contacts';
+      : 'Profiles cataloged';
 
   const allMetas: ScanMeta[] =
     domainMetas && Object.keys(domainMetas).length > 0
@@ -58,11 +57,9 @@ export const MetricsSummary: React.FC<MetricsSummaryProps> = ({
   const mailProvider =
     providers.length > 0
       ? providers.join(', ')
-      : meta?.mail?.providers?.[0] || 'MX Checked';
+      : meta?.mail?.providers?.[0] || 'Active MX Handshake';
 
   let totalScanRunSeconds = 0;
-  let totalPermuteSeconds = 0;
-
   for (const m of allMetas) {
     if (m.timings && typeof m.timings === 'object') {
       const timingsSum = Object.values(m.timings).reduce<number>(
@@ -70,133 +67,80 @@ export const MetricsSummary: React.FC<MetricsSummaryProps> = ({
         0
       );
       totalScanRunSeconds += timingsSum > 0 ? timingsSum : parseTimingNumber(m.elapsed_seconds);
-      totalPermuteSeconds += parseTimingNumber(m.timings.permute ?? (m as Record<string, unknown>).permute);
     } else {
       totalScanRunSeconds += parseTimingNumber(m.elapsed_seconds);
-      totalPermuteSeconds += parseTimingNumber((m as Record<string, unknown>)?.permute);
     }
   }
 
-  // Fallback to meta if allMetas didn't yield values
   if (totalScanRunSeconds === 0 && meta) {
-    if (meta.timings && typeof meta.timings === 'object') {
-      totalScanRunSeconds = Object.values(meta.timings).reduce<number>(
-        (acc, val) => acc + parseTimingNumber(val),
-        0
-      );
-    }
-    if (totalScanRunSeconds === 0) {
-      totalScanRunSeconds = parseTimingNumber(meta.elapsed_seconds);
-    }
+    totalScanRunSeconds = parseTimingNumber(meta.elapsed_seconds);
   }
 
-  if (totalPermuteSeconds === 0 && meta) {
-    totalPermuteSeconds = parseTimingNumber(
-      meta.timings?.permute ?? (meta as Record<string, unknown>)?.permute
-    );
-  }
-
-  const enrichTimeString = formatEnrichTime(totalPermuteSeconds);
   const scanRunTimeString = formatEnrichTime(totalScanRunSeconds);
 
-  const cards = [
-    {
-      title: 'Total Discovered',
-      value: peopleCount,
-      subtext: totalSubtext,
-      icon: Users,
-      color: 'from-sky-500/20 to-sky-600/5',
-      borderColor: 'border-sky-500/30',
-      iconColor: 'text-sky-400',
-    },
-    {
-      title: 'With Email',
-      value: withEmailCount,
-      subtext: `${((withEmailCount / (peopleCount || 1)) * 100).toFixed(0)}% resolved`,
-      icon: Mail,
-      color: 'from-amber-500/20 to-amber-600/5',
-      borderColor: 'border-amber-500/30',
-      iconColor: 'text-amber-400',
-    },
-    {
-      title: 'Verified Deliverable',
-      value: verifiedCount,
-      subtext: verifiedCount === 0 ? 'Port 25 blocked / unverified' : 'SMTP verified / valid',
-      icon: CheckCircle2,
-      color: 'from-emerald-500/20 to-emerald-600/5',
-      borderColor: 'border-emerald-500/30',
-      iconColor: 'text-emerald-400',
-    },
-    {
-      title: 'LinkedIn Profiles',
-      value: withLinkedinCount,
-      subtext: `${((withLinkedinCount / (peopleCount || 1)) * 100).toFixed(0)}% mapped`,
-      icon: LinkedinIcon,
-      color: 'from-blue-500/20 to-blue-600/5',
-      borderColor: 'border-blue-500/30',
-      iconColor: 'text-blue-400',
-    },
-  ];
-
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {cards.map((card, idx) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={idx}
-              className={`p-3.5 rounded-2xl bg-gradient-to-br ${card.color} bg-[#0c101d] border ${card.borderColor} backdrop-blur shadow-lg shadow-black/10 flex items-center justify-between transition hover:scale-[1.01]`}
-            >
-              <div>
-                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-                  {card.title}
-                </p>
-                <p className="text-2xl font-bold text-white tracking-tight mt-0.5">
-                  {card.value.toLocaleString()}
-                </p>
-                <p className="text-[11px] text-slate-400 mt-0.5">{card.subtext}</p>
-              </div>
-              <div className={`p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 ${card.iconColor}`}>
-                <Icon className="w-5 h-5" />
-              </div>
-            </div>
-          );
-        })}
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-space-md">
+      {/* Total People */}
+      <div className="bg-surface-container-lowest p-5 rounded-2xl border border-surface-container shadow-sm flex flex-col justify-between">
+        <div className="flex items-center justify-between text-secondary mb-2">
+          <span className="font-data-mono-sm text-data-mono-sm uppercase font-semibold">Total Resolved</span>
+          <span className="material-symbols-outlined text-[20px] text-primary">groups</span>
+        </div>
+        <div>
+          <span className="font-headline-lg text-headline-lg font-bold text-on-surface">
+            {peopleCount}
+          </span>
+          <p className="font-body-sm text-body-sm text-secondary mt-0.5">{totalSubtext}</p>
+        </div>
       </div>
 
-      {/* Domain Intel Mini Bar */}
-      {meta && (
-        <div className="px-4 py-2 rounded-xl bg-[#0b101c] border border-slate-800/80 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
-          <div className="flex items-center gap-4 flex-wrap">
-            <span className="flex items-center gap-1.5 text-slate-300">
-              <Server className="w-3.5 h-3.5 text-sky-400" />
-              <span>Mail Host:</span>
-              <strong className="text-white font-mono">{mailProvider}</strong>
-            </span>
-
-            <span className="flex items-center gap-1.5 text-slate-300">
-              <Clock className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Email Enrich Time:</span>
-              <strong className="text-white font-mono bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-800/60">
-                {enrichTimeString}
-              </strong>
-            </span>
-          </div>
-
-          {totalScanRunSeconds > 0 ? (
-            <div className="text-[11px] font-mono text-slate-500">
-              Scan run: {scanRunTimeString}{/*  • Total records: {peopleCount} */}
-            </div>
-          ) : meta.elapsed_seconds ? (
-            <div className="text-[11px] font-mono text-slate-500">
-              Scan run: {formatEnrichTime(meta.elapsed_seconds)}{/*  • Total records: {peopleCount} */}
-            </div>
-          ) : (
-            <></>
-          )}
+      {/* Verified Emails */}
+      <div className="bg-surface-container-lowest p-5 rounded-2xl border border-surface-container shadow-sm flex flex-col justify-between">
+        <div className="flex items-center justify-between text-secondary mb-2">
+          <span className="font-data-mono-sm text-data-mono-sm uppercase font-semibold">Direct MX Valid</span>
+          <span className="material-symbols-outlined text-[20px] text-[#059669]">verified</span>
         </div>
-      )}
+        <div>
+          <span className="font-headline-lg text-headline-lg font-bold text-[#059669]">
+            {verifiedCount}
+          </span>
+          <p className="font-body-sm text-body-sm text-secondary mt-0.5">
+            {peopleCount > 0 ? `${Math.round((verifiedCount / peopleCount) * 100)}% deliverability` : 'Zero bounce'}
+          </p>
+        </div>
+      </div>
+
+      {/* With Email */}
+      <div className="bg-surface-container-lowest p-5 rounded-2xl border border-surface-container shadow-sm flex flex-col justify-between">
+        <div className="flex items-center justify-between text-secondary mb-2">
+          <span className="font-data-mono-sm text-data-mono-sm uppercase font-semibold">With Mailbox</span>
+          <span className="material-symbols-outlined text-[20px] text-tertiary">mail</span>
+        </div>
+        <div>
+          <span className="font-headline-lg text-headline-lg font-bold text-on-surface">
+            {withEmailCount}
+          </span>
+          <p className="font-body-sm text-body-sm text-secondary mt-0.5">
+            {mailProvider}
+          </p>
+        </div>
+      </div>
+
+      {/* LinkedIn Profiles */}
+      <div className="bg-surface-container-lowest p-5 rounded-2xl border border-surface-container shadow-sm flex flex-col justify-between">
+        <div className="flex items-center justify-between text-secondary mb-2">
+          <span className="font-data-mono-sm text-data-mono-sm uppercase font-semibold">LinkedIn Matches</span>
+          <LinkedinIcon className="w-5 h-5 text-[#0a66c2]" />
+        </div>
+        <div>
+          <span className="font-headline-lg text-headline-lg font-bold text-primary">
+            {withLinkedinCount}
+          </span>
+          <p className="font-body-sm text-body-sm text-secondary mt-0.5">
+            {scanRunTimeString ? `Scanned in ${scanRunTimeString}` : 'Active graph links'}
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
