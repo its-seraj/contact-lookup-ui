@@ -6,11 +6,13 @@ import { LiveLogFeed } from './components/LiveLogFeed';
 import { MetricsSummary } from './components/MetricsSummary';
 import { ContactsGrid } from './components/ContactsGrid';
 import { LandingPage } from './components/LandingPage';
+import { ApiDocumentation } from './components/ApiDocumentation';
 import { useScanStream } from './hooks/useScanStream';
 import { useAuth } from './hooks/useAuth';
 
 export function App() {
   const { isAuthenticated, user, triggerGoogleSignIn, error: authError, clearError: clearAuthError } = useAuth();
+  const [consoleTab, setConsoleTab] = useState<'console' | 'docs'>('console');
   const [domains, setDomains] = useState<string[]>([]);
   const [isVerify, setIsVerify] = useState<boolean>(false);
   const [isLinkedin, setIsLinkedin] = useState<boolean>(true);
@@ -83,13 +85,18 @@ export function App() {
           onSelectSampleDomain={handleSelectSampleDomain}
         />
       ) : (
-        /* View: Enrichment Console */
+        /* View: Enrichment Console & API Docs */
         <div className="flex-1 flex flex-col">
           {/* Console Header */}
-          <Header />
+          <Header currentTab={consoleTab} onNavigateTab={setConsoleTab} />
 
-          {/* Console Main Workspace */}
-          <main className="flex-1 w-full px-4 sm:px-6 lg:px-10 py-8 space-y-6">
+          {consoleTab === 'docs' ? (
+            <main className="flex-1 w-full">
+              <ApiDocumentation onBackToConsole={() => setConsoleTab('console')} />
+            </main>
+          ) : (
+            /* Console Main Workspace */
+            <main className="flex-1 w-full px-4 sm:px-6 lg:px-10 py-8 space-y-6">
             {/* Top Workspace Bar */}
             <div className="flex flex-wrap items-center justify-between gap-space-md pb-2 border-b border-surface-container">
               <div>
@@ -235,6 +242,7 @@ export function App() {
               </div>
             )}
           </main>
+        )}
 
           {/* Console Footer */}
           <footer className="border-t border-surface-container py-5 text-center text-xs text-secondary bg-surface-container-lowest mt-auto">

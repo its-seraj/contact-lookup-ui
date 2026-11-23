@@ -3,11 +3,11 @@ import { useAuth } from '../hooks/useAuth';
 import { GoogleSignInButton } from './GoogleSignInButton';
 
 interface HeaderProps {
-  currentView?: 'landing' | 'console';
-  onNavigate?: (view: 'landing' | 'console') => void;
+  currentTab?: 'console' | 'docs';
+  onNavigateTab?: (tab: 'console' | 'docs') => void;
 }
 
-export const Header: React.FC<HeaderProps> = () => {
+export const Header: React.FC<HeaderProps> = ({ currentTab = 'console', onNavigateTab }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const apiBase = import.meta.env.VITE_API_BASE_URL as string | undefined;
 
@@ -37,18 +37,32 @@ export const Header: React.FC<HeaderProps> = () => {
           </div>
 
           {/* Navigation Menu */}
-          <nav className="flex items-center gap-3">
-            <a
-              href="https://its-seraj-contact-lookup.hf.space/docs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3.5 py-1.5 rounded-xl font-label-md text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors flex items-center gap-1.5 border border-transparent hover:border-surface-container"
-              title="Open Interactive Swagger & OpenAPI Documentation"
+          <nav className="flex items-center gap-1 bg-surface-container-low p-1 rounded-xl border border-surface-container">
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('console')}
+              className={`px-3 py-1.5 rounded-lg font-label-md text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                currentTab === 'console'
+                  ? 'bg-surface-container-lowest text-primary shadow-xs'
+                  : 'text-secondary hover:text-on-surface'
+              }`}
             >
-              <span className="material-symbols-outlined text-[16px] text-primary">description</span>
+              <span className="material-symbols-outlined text-[15px]">terminal</span>
+              <span>Enrichment Console</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateTab?.('docs')}
+              className={`px-3 py-1.5 rounded-lg font-label-md text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                currentTab === 'docs'
+                  ? 'bg-surface-container-lowest text-primary shadow-xs'
+                  : 'text-secondary hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">description</span>
               <span>API Documentation</span>
-              <span className="material-symbols-outlined text-[13px] text-secondary/60">open_in_new</span>
-            </a>
+            </button>
           </nav>
         </div>
 
@@ -94,7 +108,9 @@ export const Header: React.FC<HeaderProps> = () => {
               </button>
 
               {/* User Dropdown */}
-              <div className="absolute right-0 mt-2 w-56 bg-surface-container-lowest border border-surface-container rounded-xl shadow-xl py-2 hidden group-hover:block animate-in fade-in z-50">
+              {/* Outer wrapper uses padding (not margin) for the visual gap so the hover area stays continuous */}
+              <div className="absolute right-0 top-full pt-2 w-56 hidden group-hover:block z-50">
+              <div className="bg-surface-container-lowest border border-surface-container rounded-xl shadow-xl py-2 animate-in fade-in">
                 <div className="px-4 py-2 border-b border-surface-container-low">
                   <p className="font-semibold text-xs text-on-surface truncate">{user?.name}</p>
                   <p className="text-[11px] text-secondary truncate">{user?.email}</p>
@@ -111,6 +127,7 @@ export const Header: React.FC<HeaderProps> = () => {
                   <span className="material-symbols-outlined text-[16px]">logout</span>
                   <span>Sign Out</span>
                 </button>
+              </div>
               </div>
             </div>
           ) : (

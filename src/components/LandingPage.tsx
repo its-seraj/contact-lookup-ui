@@ -666,42 +666,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* PERFORMANCE & SCALE METRICS BAR */}
           <section className="w-full bg-surface-container-low py-space-xl px-4 sm:px-6 lg:px-10 scroll-mt-24" id="features">
             <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-space-md">
-              <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col border border-surface-container">
-                <span className="font-data-mono-sm text-data-mono-sm uppercase text-secondary font-semibold mb-1">
-                  Guaranteed Quality
-                </span>
-                <span className="font-headline-xl text-headline-xl font-bold text-primary mb-1">99.4%</span>
-                <p className="font-body-sm text-body-sm text-secondary">
-                  Direct mailbox deliverability with zero bounce rates.
-                </p>
-              </div>
-              <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col border border-surface-container">
-                <span className="font-data-mono-sm text-data-mono-sm uppercase text-secondary font-semibold mb-1">
-                  Latency
-                </span>
-                <span className="font-headline-xl text-headline-xl font-bold text-on-surface mb-1">1.4s</span>
-                <p className="font-body-sm text-body-sm text-secondary">
-                  Average domain discovery &amp; verification response time.
-                </p>
-              </div>
-              <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col border border-surface-container">
-                <span className="font-data-mono-sm text-data-mono-sm uppercase text-secondary font-semibold mb-1">
-                  Coverage
-                </span>
-                <span className="font-headline-xl text-headline-xl font-bold text-on-surface mb-1">15M+</span>
-                <p className="font-body-sm text-body-sm text-secondary">
-                  Active executive &amp; technical B2B buyer profiles cataloged.
-                </p>
-              </div>
-              <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col border border-surface-container">
-                <span className="font-data-mono-sm text-data-mono-sm uppercase text-secondary font-semibold mb-1">
-                  Accuracy Guarantee
-                </span>
-                <span className="font-headline-xl text-headline-xl font-bold text-tertiary mb-1">0%</span>
-                <p className="font-body-sm text-body-sm text-secondary">
-                  False positive rate with multi-layer direct MX pinging.
-                </p>
-              </div>
+              {[
+                { label: 'People per company', value: '~128', color: 'text-primary', desc: 'Average number of contacts discovered per company domain.' },
+                { label: 'LinkedIn match', value: '94%', color: 'text-on-surface', desc: 'Contacts matched to an active LinkedIn profile.' },
+                { label: 'Median scan', value: '21s', color: 'text-on-surface', desc: 'Median time to scan a domain end to end.' },
+                { label: 'Sources', value: '8', color: 'text-tertiary', desc: 'Data sources queried in each waterfall run.' },
+              ].map((metric) => (
+                <div key={metric.label} className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col border border-surface-container">
+                  <span className="font-data-mono-sm text-data-mono-sm uppercase text-secondary font-semibold mb-1">
+                    {metric.label}
+                  </span>
+                  <span className={`font-headline-xl text-headline-xl font-bold ${metric.color} mb-1`}>{metric.value}</span>
+                  <p className="font-body-sm text-body-sm text-secondary">{metric.desc}</p>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -765,9 +743,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <div className="w-12 h-12 rounded-xl bg-surface-container-low text-primary flex items-center justify-center mb-space-md">
                       <span className="material-symbols-outlined text-[24px]">sync_alt</span>
                     </div>
-                    <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface mb-space-xs">
-                      One-Click CRM &amp; Webhook Sync
-                    </h3>
+                    <div className="flex flex-wrap items-center gap-2 mb-space-xs">
+                      <h3 className="font-headline-sm text-headline-sm font-bold text-on-surface">
+                        One-Click CRM &amp; Webhook Sync
+                      </h3>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary-fixed text-primary text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                        Coming Soon
+                      </span>
+                    </div>
                     <p className="font-body-md text-body-md text-secondary mb-space-md">
                       Pipe enriched leads directly into HubSpot, Salesforce, Clay, or your custom outbound sequencing stack with low-latency webhooks and clean RESTful endpoints.
                     </p>
@@ -1176,7 +1159,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </section> */}
 
           {/* FINAL HIGH-CONVERSION CTA BANNER */}
-          <section className="w-full px-4 sm:px-6 lg:px-10 pb-space-xl">
+          {/* <section className="w-full px-4 sm:px-6 lg:px-10 pb-space-xl">
             <div className="w-full">
               <div className="bg-gradient-to-r from-surface-container-low via-surface-container-lowest to-surface-container-low p-space-lg lg:p-space-xl rounded-xl shadow-md flex flex-col lg:flex-row items-center justify-between gap-space-lg border border-surface-container">
                 <div className="flex flex-col max-w-xl text-center lg:text-left">
@@ -1218,7 +1201,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </form>
               </div>
             </div>
-          </section>
+          </section> */}
         </div>
       </main>
 

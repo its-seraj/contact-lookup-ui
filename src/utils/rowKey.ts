@@ -9,7 +9,7 @@ export function alpha(input: string): string {
 }
 
 /**
- * Stable identity for a contact row, mirroring `ehunter.progress.row_key`.
+ * Stable identity for a contact row, mirroring `enrivo.progress.row_key`.
  * The domain is prefixed so a multi-domain scan cannot collapse two people
  * with the same name in different companies.
  */
